@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Fuente */
+  --font-sans: "Public Sans", sans-serif;
+
+  /* Accent principal */
+  --color-accent: #A8C26A;
+  --color-accent-hover: #96B058;
+  --color-accent-muted: color-mix(in srgb, #A8C26A 10%, transparent);
+  --color-accent-on: #000000;
+
+  /* Amber — PRs */
+  --color-amber: #FFB347;
+  --color-amber-on: #000000;
+
+  /* Superficies OLED */
+  --color-surface-base: #131313;
+  --color-surface-card: #000000;
+  --color-surface-elevated: #111111;
+  --color-surface-border: #1A1A1A;
+
+  /* Textos */
+  --color-content-primary: #FFFFFF;
+  --color-content-secondary: #6B7280;
+  --color-content-muted: #374151;
+  --color-on-secondary-container: #b5b5b5;
+  --color-surface-container-low: #1b1b1b;
+
+  /* RIR semántico */
+  --color-rir-hard: #C26A6A;
+  --color-rir-neutral: #6B7280;
+  --color-rir-easy: #6AB8A8;
+
+  /* Radios */
+  --radius-card: 12px;
+  --radius-input: 8px;
+  --radius-pill: 9999px;
+
+  /* Touch targets */
+  --spacing-tap: 44px;
+
+  
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
