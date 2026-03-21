@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gym Log PWA
 
-## Getting Started
+A Progressive Web App (PWA) designed to track strength training progress over time using RIR (Reps In Reserve) as the core intensity metric. Built with a focus on structured workout logging, performance analytics, and long-term progression.
 
-First, run the development server:
+## 🚀 Overview
+
+Gym Log allows users to create personalized routines, log workouts, and monitor performance trends with a data-driven approach. Unlike basic fitness trackers, this app emphasizes training intensity through RIR, enabling more accurate fatigue management and progression tracking.
+
+## 🧠 Core Concepts
+
+* **RIR (Reps In Reserve):** Tracks how close each set is to failure, providing a more reliable measure of intensity than weight alone.
+* **Progressive Overload:** Visualize strength progression across time based on load, volume, and RIR.
+* **Structured Training:** Build and reuse routines with custom exercises.
+
+## ✨ Features
+
+* Create and manage workout routines
+* Add custom exercises
+* Log sets with:
+
+  * Weight
+  * Reps
+  * RIR
+* Track historical performance
+* Visual analytics of progression over time
+* PWA support (installable, offline-ready)
+
+## 🏗️ Tech Stack
+
+* **Frontend:** Next.js
+* **Styling:** Tailwind CSS
+* **Backend / DB:** Supabase
+* **Architecture:** Fullstack (serverless + client-driven UI)
+
+## 📊 Future Improvements
+
+* Advanced analytics (volume load, fatigue trends)
+* Exercise performance comparisons
+* User authentication & profiles
+* Social features (sharing routines, progress)
+* Smart recommendations based on history
+
+## 🧪 Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📦 Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Deployed as a PWA for mobile-first usage. Optimized for quick access during workouts.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🎯 Goal
 
-## Learn More
+Provide a simple but powerful tool for lifters who want to train with intent, track meaningful metrics, and make data-driven decisions in their programming.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
