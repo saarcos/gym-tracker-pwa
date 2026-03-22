@@ -1,7 +1,8 @@
 ﻿// src/components/routines/routine-form.tsx
 'use client'
 
-import { RoutineWithExercises, mockAvailableExercises } from "@/lib/mock/routines"
+import { mockAvailableExercises } from "@/lib/mock/routines"
+import { RoutineWithExercises } from "@/types/routine"
 import { ArrowLeft, Plus, Search, Trash2, X } from "lucide-react"
 import Link from "next/link"
 import { useRef, useState } from "react"
