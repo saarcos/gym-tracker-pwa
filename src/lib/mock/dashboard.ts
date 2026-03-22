@@ -18,10 +18,10 @@ export const mockTodayRoutine: Routine = {
 }
 
 export const mockWeeklyStats = {
-    sessions: 3,
-    volumeKg: 12400,
-    prs: 2,
-    avgRir: 1.4,
+    sessions: 0,
+    volumeKg: 0,
+    prs: 0,
+    avgRir: 0,
 }
 
 export const mockRecentPRs: Array<{ exercise: string; weightKg: number; date: string }> = [
