@@ -1,11 +1,36 @@
-import { mockRoutines } from "@/lib/mock/routines";
 import { formatDays } from "@/lib/utils/days";
+import { createClient } from "@/utils/supabase/server";
 import { ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 
+
+type RoutineRow = {
+    id: string
+    name: string
+    days: string[]
+    is_active: boolean
+    routine_exercises: { id: string }[]
+}
 // src/app/routines/page.tsx
-export default function RoutinesPage() {
-    const routines = mockRoutines;
+export default async function RoutinesPage() {
+    const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let routines: RoutineRow[] = []
+
+    if (user) {
+        const { data, error } = await supabase
+            .from('routines')
+            .select('id, name, days, is_active, routine_exercises(id)')
+            .eq('user_id', user.id)
+            .order('name')
+
+        if (!error && data) {
+            routines = data as RoutineRow[]
+        }
+    }
+
     const activeRoutines = routines.filter((routine) => routine.is_active);
     const inactiveRoutines = routines.filter((routine) => !routine.is_active);
 
@@ -87,7 +112,7 @@ export default function RoutinesPage() {
                     ACTIVE
                 </span>
                 {activeRoutines.map((routine) => (
-                    <div key={routine.id} className="w-full flex justify-between items-center p-4 border border-on-secondary-container/50 rounded-xl">
+                    <Link href={`/routines/${routine.id}`} key={routine.id} className="w-full flex justify-between items-center p-4 border border-on-secondary-container/50 rounded-xl">
                         <div className="flex flex-col gap-1">
                             <p className="text-content-primary text-lg font-semibold">{routine.name}</p>
                             <div className="flex items-center gap-2">
@@ -102,7 +127,7 @@ export default function RoutinesPage() {
                             <p>{routine.routine_exercises.length} {routine.routine_exercises.length !== 1 ? "exercises" : "exercise"} </p>
                             <ChevronRight className="w-5 h-5" />
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </div>
             <div className="flex flex-col gap-2">

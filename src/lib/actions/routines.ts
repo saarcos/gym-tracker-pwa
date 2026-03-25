@@ -1,0 +1,144 @@
+'use server'
+import { createClient } from '@/utils/supabase/server'
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+
+// ─── Crear ejercicio custom ───
+export async function createExercise(formData: {
+    name: string
+    muscle_group: string
+    type: string
+}) {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    const { data, error } = await supabase
+        .from('exercises')
+        .insert({
+            name: formData.name.trim(),
+            muscle_group: formData.muscle_group,
+            type: formData.type,
+            is_custom: true,
+            user_id: user.id,
+        })
+        .select()
+        .single()
+
+    if (error) {
+        // Violación de unique constraint (nombre duplicado)
+        if (error.code === '23505') {
+            throw new Error('An exercise with that name already exists.')
+        }
+        throw new Error(error.message)
+    }
+
+    return data
+}
+
+// ─── Crear rutina ───
+export async function createRoutine(formData: {
+    name: string
+    days: string[]
+    exercises: {
+        exercise_id: string
+        sets_target: number
+        reps_target: number
+        rir_target: number
+        rest_seconds: number
+        sort_order: number
+    }[]
+}) {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    // Insertar la rutina primero
+    const { data: routine, error: routineError } = await supabase
+        .from('routines')
+        .insert({
+            name: formData.name.trim(),
+            days: formData.days,
+            user_id: user.id,
+            is_active: true,
+        })
+        .select()
+        .single()
+
+    if (routineError) throw new Error(routineError.message)
+
+    // Insertar los ejercicios si hay alguno
+    if (formData.exercises.length > 0) {
+        const { error: exercisesError } = await supabase
+            .from('routine_exercises')
+            .insert(
+                formData.exercises.map(ex => ({
+                    ...ex,
+                    routine_id: routine.id,
+                }))
+            )
+
+        if (exercisesError) throw new Error(exercisesError.message)
+    }
+
+    revalidatePath('/routines')
+    redirect('/routines')
+}
+
+// ─── Editar rutina ───
+export async function updateRoutine(routineId: string, formData: {
+    name: string
+    days: string[]
+    exercises: {
+        exercise_id: string
+        sets_target: number
+        reps_target: number
+        rir_target: number
+        rest_seconds: number
+        sort_order: number
+    }[]
+}) {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    // Actualizar la rutina
+    const { error: routineError } = await supabase
+        .from('routines')
+        .update({
+            name: formData.name.trim(),
+            days: formData.days,
+        })
+        .eq('id', routineId)
+        .eq('user_id', user.id) // seguridad extra además del RLS
+
+    if (routineError) throw new Error(routineError.message)
+
+    // Reemplazar todos los ejercicios — delete + insert es más simple
+    // que intentar hacer diff entre los existentes y los nuevos
+    const { error: deleteError } = await supabase
+        .from('routine_exercises')
+        .delete()
+        .eq('routine_id', routineId)
+
+    if (deleteError) throw new Error(deleteError.message)
+
+    if (formData.exercises.length > 0) {
+        const { error: insertError } = await supabase
+            .from('routine_exercises')
+            .insert(
+                formData.exercises.map(ex => ({
+                    ...ex,
+                    routine_id: routineId,
+                }))
+            )
+
+        if (insertError) throw new Error(insertError.message)
+    }
+
+    revalidatePath('/routines')
+    redirect('/routines')
+}

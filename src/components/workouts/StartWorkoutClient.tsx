@@ -13,6 +13,19 @@ type SetValues = {
     rir: string;
 };
 
+type ExerciseProgress = {
+    setsData: SetValues[];
+    completedCount: number;
+};
+
+type CompletedSet = {
+    exerciseId: string;
+    setNumber: number;
+    weightKg: number;
+    reps: number;
+    rir: number;
+};
+
 export default function StartWorkoutClient({ routine }: { routine: RoutineWithExercises }) {
 
     const [selectedExercise, setSelectedExercise] = useState(0);
@@ -35,12 +48,14 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
     );
     const [completedCount, setCompletedCount] = useState(0);
     const [editingSetIndex, setEditingSetIndex] = useState<number | null>(null);
+    const [exerciseProgress, setExerciseProgress] = useState<Record<string, ExerciseProgress>>({});
+    const [completedSets, setCompletedSets] = useState<CompletedSet[]>([]);
     const initialTimerMs = (currentExercise?.rest_seconds ?? 120) * 1000;
     const [endTime, setEndTime] = useState<number | null>(null);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [pausedRemainingMs, setPausedRemainingMs] = useState(initialTimerMs);
     const [nowMs, setNowMs] = useState(() => Date.now());
-
+    const isExerciseCompleted = completedCount >= targetSets && editingSetIndex === null;
     const activeSetIndex =
         editingSetIndex !== null
             ? editingSetIndex
@@ -66,14 +81,77 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
         );
     };
 
+    const normalizeCompletedSetsForExercise = (
+        exerciseId: string,
+        exerciseSetsData: SetValues[],
+        exerciseCompletedCount: number,
+    ) => {
+        const currentCompleted = exerciseSetsData
+            .slice(0, exerciseCompletedCount)
+            .map((set, index) => {
+                const weightKg = Number(set.kg);
+                const reps = Number(set.reps);
+                const rir = Number(set.rir);
+
+                if (
+                    set.kg.trim() === "" ||
+                    set.reps.trim() === "" ||
+                    set.rir.trim() === "" ||
+                    Number.isNaN(weightKg) ||
+                    Number.isNaN(reps) ||
+                    Number.isNaN(rir)
+                ) {
+                    return null;
+                }
+
+                return {
+                    exerciseId,
+                    setNumber: index + 1,
+                    weightKg,
+                    reps,
+                    rir,
+                };
+            })
+            .filter((set): set is CompletedSet => set !== null);
+
+        setCompletedSets((prev) => {
+            const remaining = prev.filter((set) => set.exerciseId !== exerciseId);
+            return [...remaining, ...currentCompleted];
+        });
+
+        return currentCompleted;
+    };
+
+    const persistExerciseProgress = (
+        exerciseId: string,
+        exerciseSetsData: SetValues[],
+        exerciseCompletedCount: number,
+    ) => {
+        setExerciseProgress((prev) => ({
+            ...prev,
+            [exerciseId]: {
+                setsData: exerciseSetsData,
+                completedCount: exerciseCompletedCount,
+            },
+        }));
+        normalizeCompletedSetsForExercise(exerciseId, exerciseSetsData, exerciseCompletedCount);
+    };
+
     const completeActiveSet = () => {
         if (activeSetIndex === -1) return;
         if (!isSetValid(setsData[activeSetIndex])) return;
         if (editingSetIndex !== null) {
             setEditingSetIndex(null);
+            if (currentExercise) {
+                persistExerciseProgress(currentExercise.exercise_id, setsData, completedCount);
+            }
             return;
         }
-        setCompletedCount((prev) => Math.min(prev + 1, targetSets));
+        const nextCompletedCount = Math.min(completedCount + 1, targetSets);
+        setCompletedCount(nextCompletedCount);
+        if (currentExercise) {
+            persistExerciseProgress(currentExercise.exercise_id, setsData, nextCompletedCount);
+        }
         const now = Date.now();
         setPausedRemainingMs(initialTimerMs);
         setEndTime(now + initialTimerMs);
@@ -143,16 +221,48 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
 
     const goToExercise = (nextIndex: number) => {
         if (nextIndex < 0 || nextIndex >= routine.routine_exercises.length) return;
+
+        if (currentExercise) {
+            persistExerciseProgress(currentExercise.exercise_id, setsData, completedCount);
+        }
+
+        const nextExercise = routine.routine_exercises[nextIndex];
+        const savedNextProgress = exerciseProgress[nextExercise.exercise_id];
         setSelectedExercise(nextIndex);
-        setSetsData(buildSetsData(nextIndex));
-        setCompletedCount(0);
+        if (savedNextProgress) {
+            setSetsData(savedNextProgress.setsData);
+            setCompletedCount(savedNextProgress.completedCount);
+        } else {
+            setSetsData(buildSetsData(nextIndex));
+            setCompletedCount(0);
+        }
         setEditingSetIndex(null);
-        const nextInitialMs = (routine.routine_exercises[nextIndex]?.rest_seconds ?? 120) * 1000;
+        const nextInitialMs = (nextExercise?.rest_seconds ?? 120) * 1000;
         setPausedRemainingMs(nextInitialMs);
         setEndTime(null);
         setIsTimerRunning(false);
         setNowMs(Date.now());
     };
+
+    const finishWorkout = () => {
+        let payload = completedSets;
+
+        if (currentExercise) {
+            const currentExerciseId = currentExercise.exercise_id;
+            persistExerciseProgress(currentExerciseId, setsData, completedCount);
+            const currentExerciseCompletedSets = normalizeCompletedSetsForExercise(
+                currentExerciseId,
+                setsData,
+                completedCount,
+            );
+            payload = [
+                ...completedSets.filter((set) => set.exerciseId !== currentExerciseId),
+                ...currentExerciseCompletedSets,
+            ];
+        }
+
+        console.log("Completed sets payload", payload);
+    }
 
     return (
         <div className="flex flex-col gap-6 min-h-screen px-6 pt-8 pb-32">
@@ -166,6 +276,7 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
             <div className="flex flex-col gap-2">
                 <h1 className="text-[1.375rem] font-bold leading-tight text-content-primary">{currentExercise?.exercise.name}</h1>
                 <p className="text-on-secondary-container text-[0.8125rem] font-medium opacity-70">{currentExercise?.sets_target} sets · {currentExercise?.reps_target} reps · RIR {currentExercise?.rir_target}</p>
+                <p className="text-on-secondary-container text-[0.6875rem] font-bold uppercase tracking-wider">Logged sets: {completedSets.length}</p>
 
                 <div className="mt-2 inline-flex items-center gap-2 bg-accent px-3 py-1.5 rounded-full max-w-50">
                     <TrendingUp className="text-accent-on" />
@@ -317,15 +428,28 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
                         onClick={() => goToExercise(selectedExercise - 1)}
                         disabled={selectedExercise === 0}
                         className="flex-1 h-12 rounded-full border border-content-primary/50 flex items-center justify-center gap-2 active:scale-95 transition-transform text-content-primary">
-                        <ChevronLeft className="text-[1.25rem]"/>
+                        <ChevronLeft className="text-[1.25rem]" />
                         <span className="text-[0.8125rem] font-bold uppercase tracking-wider">Previous</span>
                     </button>
                     <button
                         type="button"
-                        onClick={() => goToExercise(selectedExercise + 1)}
-                        disabled={selectedExercise >= routine.routine_exercises.length - 1}
+                        onClick={() => {
+                            const isLastExercise = selectedExercise >= routine.routine_exercises.length - 1
+                            if (isLastExercise) {
+                                finishWorkout()
+                            } else {
+                                goToExercise(selectedExercise + 1)
+                            }
+                        }}
+                        disabled={routine.routine_exercises.length === 0 || !isExerciseCompleted}
                         className="flex-[1.5] h-12 rounded-full bg-accent text-on-primary flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-accent/10">
-                        <span className="text-[0.8125rem] font-bold uppercase tracking-wider">Next exercise</span>
+                        <span className="text-[0.8125rem] font-bold uppercase tracking-wider">
+                            {selectedExercise + 1 === routine.routine_exercises.length
+                                ? 'Finish'
+                                : isExerciseCompleted
+                                    ? 'Next exercise'
+                                    : `Complete ${targetSets - completedCount} sets`}
+                        </span>
                         <ChevronRight className="text-[1.25rem]" />
                     </button>
                 </div>

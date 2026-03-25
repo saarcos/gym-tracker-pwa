@@ -1,9 +1,20 @@
 import Link from "next/link"
 
-import { mockRecentPRs, mockTodayRoutine, mockWeeklyStats } from "@/lib/mock/dashboard"
+import { mockRecentPRs, mockWeeklyStats } from "@/lib/mock/dashboard"
 import { mockRoutines } from "@/lib/mock/routines"
+import { createClient } from "@/utils/supabase/server"
 
-export default function Home() {
+export default async function Home() {
+  const today = new Date();
+  const todayName = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const supabase = await createClient();
+  const { data: todayRoutine } = await supabase
+    .from('routines')
+    .select('id, name, days, is_active, routine_exercises(id)')
+    .contains('days', [todayName])
+    .eq('is_active', true)
+    .single()
+
   const formattedDate = new Date().toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -11,7 +22,6 @@ export default function Home() {
   })
 
   const hasRoutines = mockRoutines.length > 0
-  const todayRoutine = hasRoutines ? mockTodayRoutine : null
   const weeklyStats = mockWeeklyStats
   const recentPrs = mockRecentPRs
 
@@ -33,7 +43,7 @@ export default function Home() {
               <h2 className="text-content-primary text-3xl font-bold leading-tight">
                 {todayRoutine.name}
               </h2>
-              <p className="text-on-secondary-container text-sm">6 exercises</p>
+              <p className="text-on-secondary-container text-sm">{todayRoutine.routine_exercises.length} exercises</p>
             </div>
             <div className="w-full h-0.5 bg-on-secondary-container rounded-full overflow-hidden">
               <div className="h-full bg-accent w-0" />
@@ -47,6 +57,20 @@ export default function Home() {
               Start session
             </Link>
           </>
+        ) : hasRoutines ? (
+          <div className="border border-on-secondary-container/50 rounded-xl p-4 flex flex-col gap-3">
+            <p className="text-on-secondary-container text-sm">
+              No routine selected. Pick one to start your next session.
+            </p>
+            <Link
+              href="/routines"
+              className="w-full bg-accent hover:bg-accent-hover text-accent-on
+                        h-12 rounded-full font-semibold uppercase tracking-wide
+                        transition-colors inline-flex items-center justify-center"
+            >
+              Select routine
+            </Link>
+          </div>
         ) : (
           <div className="border border-on-secondary-container/50 rounded-xl p-4 flex flex-col gap-3">
             <p className="text-on-secondary-container text-sm">No routines created yet.</p>

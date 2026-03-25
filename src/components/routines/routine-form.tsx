@@ -9,11 +9,19 @@ import { useRef, useState } from "react"
 
 type Props = {
     routine?: RoutineWithExercises  // undefined = modo creacion
+    availableExercises: AvailableExercise[]
 }
+
+// Agrega esto:
+import { createExercise, createRoutine, updateRoutine } from "@/lib/actions/routines"
+import type { Tables } from "@/types/database"
+
+type AvailableExercise = Pick<Tables<'exercises'>, 'id' | 'name' | 'muscle_group' | 'type'>
 
 type TargetField = "sets" | "reps" | "rir" | "rest"
 
-export default function RoutineForm({ routine }: Props) {
+
+export default function RoutineForm({ routine, availableExercises }: Props) {
     const isEditing = !!routine
     const DAYS = [
         { label: "M", value: "monday" },
@@ -31,7 +39,18 @@ export default function RoutineForm({ routine }: Props) {
     const [isPickerOpen, setIsPickerOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [selectedCategory, setSelectedCategory] = useState<string>("all")
+    const [isCreateExerciseModalOpen, setIsCreateExerciseModalOpen] = useState(false)
     const [exerciseToConfigure, setExerciseToConfigure] = useState<(typeof mockAvailableExercises)[number] | null>(null)
+    const [customExercises, setCustomExercises] = useState<AvailableExercise[]>([])
+    const [saveError, setSaveError] = useState('');
+    const [isSaving, setIsSaving] = useState(false)
+
+    const [newExerciseForm, setNewExerciseForm] = useState({
+        name: "",
+        muscle_group: "chest",
+        type: "compound",
+    })
+    const [newExerciseError, setNewExerciseError] = useState("")
     const [newExerciseTargets, setNewExerciseTargets] = useState({
         sets: "3",
         reps: "10",
@@ -48,15 +67,17 @@ export default function RoutineForm({ routine }: Props) {
         )
     }
 
+    const allExercises = [...availableExercises, ...customExercises]
+
     const categories = [
         "all",
-        ...Array.from(new Set(mockAvailableExercises.map((exercise) => exercise.muscle_group))).sort(),
+        ...Array.from(new Set(allExercises.map((exercise) => exercise.muscle_group))).sort(),
     ]
 
     const selectedExerciseIds = new Set(routineExercises.map((exercise) => exercise.exercise_id))
     const normalizedQuery = searchQuery.trim().toLowerCase()
 
-    const filteredExercises = mockAvailableExercises.filter((exercise) => {
+    const filteredExercises = allExercises.filter((exercise) => {
         const isAlreadyAdded = selectedExerciseIds.has(exercise.id)
         const matchesCategory = selectedCategory === "all" || exercise.muscle_group === selectedCategory
         const matchesQuery = normalizedQuery.length === 0 || exercise.name.toLowerCase().includes(normalizedQuery)
@@ -151,6 +172,93 @@ export default function RoutineForm({ routine }: Props) {
         })
     }
 
+    const resetNewExerciseForm = () => {
+        setNewExerciseForm({
+            name: "",
+            muscle_group: "chest",
+            type: "compound",
+        })
+        setNewExerciseError("")
+    }
+
+    const openCreateExerciseModal = () => {
+        resetNewExerciseForm()
+        setIsCreateExerciseModalOpen(true)
+    }
+
+    const closeCreateExerciseModal = () => {
+        setIsCreateExerciseModalOpen(false)
+        setNewExerciseError("")
+    }
+
+    const createCustomExercise = async () => {
+        const normalizedName = newExerciseForm.name.trim()
+
+        if (!normalizedName) {
+            setNewExerciseError("Exercise name is required.")
+            return
+        }
+
+        const alreadyExists = allExercises.some(
+            (exercise) => exercise.name.trim().toLowerCase() === normalizedName.toLowerCase()
+        )
+
+        if (alreadyExists) {
+            setNewExerciseError("An exercise with that name already exists.")
+            return
+        }
+
+        try {
+            // Guarda en Supabase y usa el id real devuelto
+            const created = await createExercise(newExerciseForm)
+            const newEx: AvailableExercise = {
+                id: created.id,
+                name: created.name,
+                muscle_group: created.muscle_group,
+                type: created.type,
+            }
+            setCustomExercises(prev => [...prev, newEx])
+            setSelectedCategory(newEx.muscle_group)
+            setSearchQuery(newEx.name)
+            setExerciseToConfigure(newEx)
+            setIsCreateExerciseModalOpen(false)
+            setNewExerciseError('')
+        } catch (err) {
+            setNewExerciseError(err instanceof Error ? err.message : 'Something went wrong.')
+        }
+    }
+    const handleSave = async () => {
+        if (!routineName.trim() || routineExercises.length === 0) return
+
+        setIsSaving(true)
+        setSaveError('')
+
+        try {
+            const payload = {
+                name: routineName,
+                days: selectedDays,
+                exercises: routineExercises.map(ex => ({
+                    exercise_id: ex.exercise_id,
+                    sets_target: ex.sets_target,
+                    reps_target: ex.reps_target,
+                    rir_target: ex.rir_target,
+                    rest_seconds: ex.rest_seconds,
+                    sort_order: ex.sort_order,
+                })),
+            }
+
+            if (isEditing) {
+                await updateRoutine(routine!.id, payload)
+            } else {
+                await createRoutine(payload)
+            }
+            // redirect() en el server action lleva al usuario a /routines
+        } catch (err) {
+            setSaveError(err instanceof Error ? err.message : 'Something went wrong.')
+            setIsSaving(false)
+        }
+    }
+
     const confirmAddExercise = () => {
         if (!exerciseToConfigure) return
 
@@ -173,7 +281,18 @@ export default function RoutineForm({ routine }: Props) {
                         <ArrowLeft />
                         <h1 className="text-lg">{isEditing ? 'Edit routine' : 'New routine'}</h1>
                     </Link>
-                    <span className="text-lg font-semibold tracking-widest text-accent">Save</span>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving || !routineName.trim() || routineExercises.length === 0 || selectedDays.length===0}
+                        className="text-lg font-semibold tracking-widest text-accent disabled:opacity-40 transition-opacity"
+                    >
+                        {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+
+                    {saveError && (
+                        <p className="text-red-400 text-xs text-center">{saveError}</p>
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -308,6 +427,7 @@ export default function RoutineForm({ routine }: Props) {
                                 onClick={() => {
                                     setIsPickerOpen(false)
                                     setExerciseToConfigure(null)
+                                    setIsCreateExerciseModalOpen(false)
                                 }}
                                 className="w-8 h-8 rounded-full flex items-center justify-center text-on-secondary-container hover:bg-surface-container-low transition-colors"
                                 aria-label="Close"
@@ -315,6 +435,14 @@ export default function RoutineForm({ routine }: Props) {
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={openCreateExerciseModal}
+                            className="w-full h-11 mb-4 rounded-full border border-accent/40 text-accent font-semibold hover:bg-accent/10 transition-colors"
+                        >
+                            New exercise
+                        </button>
 
                         <div className="relative mb-4">
                             <Search className="w-4 h-4 text-on-secondary-container absolute left-4 top-1/2 -translate-y-1/2" />
@@ -442,6 +570,92 @@ export default function RoutineForm({ routine }: Props) {
                                 </button>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {isCreateExerciseModalOpen && (
+                <div className="fixed inset-0 z-110 flex items-center justify-center px-4">
+                    <button
+                        type="button"
+                        className="absolute inset-0 bg-black/70"
+                        onClick={closeCreateExerciseModal}
+                        aria-label="Close new exercise modal"
+                    />
+
+                    <div className="relative z-111 w-full max-w-md rounded-2xl border border-on-secondary-container/25 bg-surface-base p-5">
+                        <h3 className="text-content-primary text-lg font-semibold">Create new exercise</h3>
+                        <p className="text-on-secondary-container text-xs uppercase tracking-wider font-bold mt-1 mb-4">
+                            Add it to your picker
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <label className="flex flex-col gap-1">
+                                <span className="text-[10px] text-on-secondary-container font-bold uppercase tracking-wider">Name</span>
+                                <input
+                                    type="text"
+                                    value={newExerciseForm.name}
+                                    onChange={(event) => {
+                                        setNewExerciseForm((prev) => ({ ...prev, name: event.target.value }))
+                                        if (newExerciseError) setNewExerciseError("")
+                                    }}
+                                    placeholder="e.g. Incline dumbbell press"
+                                    className="text-white h-11 px-3 rounded-lg bg-surface-container-low border border-on-secondary-container/25 text-sm focus:ring-0"
+                                />
+                            </label>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className="flex flex-col gap-1">
+                                    <span className="text-[10px] text-on-secondary-container font-bold uppercase tracking-wider">Muscle group</span>
+                                    <select
+                                        value={newExerciseForm.muscle_group}
+                                        onChange={(event) => setNewExerciseForm((prev) => ({ ...prev, muscle_group: event.target.value }))}
+                                        className="text-white h-11 px-3 rounded-lg bg-surface-container-low border border-on-secondary-container/25 text-sm focus:ring-0"
+                                    >
+                                        {categories
+                                            .filter((category) => category !== "all")
+                                            .map((category) => (
+                                                <option key={category} value={category}>
+                                                    {category}
+                                                </option>
+                                            ))}
+                                    </select>
+                                </label>
+
+                                <label className="flex flex-col gap-1">
+                                    <span className="text-[10px] text-on-secondary-container font-bold uppercase tracking-wider">Type</span>
+                                    <select
+                                        value={newExerciseForm.type}
+                                        onChange={(event) => setNewExerciseForm((prev) => ({ ...prev, type: event.target.value }))}
+                                        className="text-white h-11 px-3 rounded-lg bg-surface-container-low border border-on-secondary-container/25 text-sm focus:ring-0"
+                                    >
+                                        <option value="compound">compound</option>
+                                        <option value="isolation">isolation</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+
+                        {newExerciseError && (
+                            <p className="text-red-400 text-xs mt-3">{newExerciseError}</p>
+                        )}
+
+                        <div className="flex items-center justify-end gap-2 mt-5">
+                            <button
+                                type="button"
+                                onClick={closeCreateExerciseModal}
+                                className="h-10 px-4 rounded-full border border-on-secondary-container/30 text-on-secondary-container font-semibold hover:bg-surface-container-low transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={createCustomExercise}
+                                className="h-10 px-5 rounded-full bg-accent text-black font-semibold hover:bg-accent/90 transition-colors"
+                            >
+                                Add exercise
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
