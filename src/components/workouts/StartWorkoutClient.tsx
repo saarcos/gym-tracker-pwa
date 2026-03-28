@@ -2,6 +2,7 @@
 
 "use client";
 
+import { saveSession } from "@/lib/actions/sessions";
 import { RoutineWithExercises } from "@/types/routine";
 import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Circle, History, Lock, TrendingUp } from "lucide-react";
 import Link from "next/link";
@@ -55,6 +56,11 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [pausedRemainingMs, setPausedRemainingMs] = useState(initialTimerMs);
     const [nowMs, setNowMs] = useState(() => Date.now());
+    const [notes, setNotes] = useState('');
+    const [startTime] = useState(() => Date.now())
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+
     const isExerciseCompleted = completedCount >= targetSets && editingSetIndex === null;
     const activeSetIndex =
         editingSetIndex !== null
@@ -244,7 +250,10 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
         setNowMs(Date.now());
     };
 
-    const finishWorkout = () => {
+    const finishWorkout = async () => {
+        if (isSaving) return;
+        setSaveError(null);
+        const durationSeconds = Math.floor((Date.now() - startTime) / 1000)
         let payload = completedSets;
 
         if (currentExercise) {
@@ -261,7 +270,18 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
             ];
         }
 
-        console.log("Completed sets payload", payload);
+        try {
+            setIsSaving(true);
+            await saveSession({
+                routineId: routine.id,
+                duration_seconds: durationSeconds,
+                notes,
+                sets: payload,
+            });
+        } catch {
+            setSaveError("The workout could not be saved, try again.");
+            setIsSaving(false);
+        }
     }
 
     return (
@@ -421,6 +441,20 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
                     {isTimerRunning ? "Pause" : "Resume"}
                 </button>
             </section>
+            {selectedExercise === routine.routine_exercises.length - 1 && (
+                <textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="Session notes... (optional)"
+                    className="w-full px-4 py-3 rounded-xl bg-surface-container-low 
+                    border border-on-secondary-container/25 text-white 
+                    placeholder:text-on-secondary-container/40 
+                    text-sm resize-none focus:ring-0"
+                    rows={2}
+                />
+            )
+
+            }
             <nav className="fixed bottom-0 left-0 w-full bg-surface-base/80 backdrop-blur-xl border-t border-[#45483b]/15 px-6 py-4 pb-8 z-100">
                 <div className="flex items-center gap-4 max-w-md mx-auto">
                     <button
@@ -436,23 +470,25 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
                         onClick={() => {
                             const isLastExercise = selectedExercise >= routine.routine_exercises.length - 1
                             if (isLastExercise) {
-                                finishWorkout()
+                                void finishWorkout()
                             } else {
                                 goToExercise(selectedExercise + 1)
                             }
                         }}
-                        disabled={routine.routine_exercises.length === 0 || !isExerciseCompleted}
-                        className="flex-[1.5] h-12 rounded-full bg-accent text-on-primary flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-accent/10">
+                        disabled={routine.routine_exercises.length === 0 || !isExerciseCompleted || isSaving}
+                        className={`${!isExerciseCompleted ? 'bg-accent/60' : 'bg-accent '} flex-[1.5] h-12 rounded-full text-on-primary flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-accent/10`}>
                         <span className="text-[0.8125rem] font-bold uppercase tracking-wider">
-                            {selectedExercise + 1 === routine.routine_exercises.length
-                                ? 'Finish'
-                                : isExerciseCompleted
+                            {selectedExercise === routine.routine_exercises.length - 1 ? (isSaving ? 'Saving...' : 'Finish') :
+                                isExerciseCompleted
                                     ? 'Next exercise'
                                     : `Complete ${targetSets - completedCount} sets`}
                         </span>
                         <ChevronRight className="text-[1.25rem]" />
                     </button>
                 </div>
+                {saveError && (
+                    <p className="mt-3 text-center text-xs font-medium text-red-400">{saveError}</p>
+                )}
             </nav>
         </div>
     );

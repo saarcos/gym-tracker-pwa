@@ -60,15 +60,15 @@ export default async function Home() {
         ) : hasRoutines ? (
           <div className="border border-on-secondary-container/50 rounded-xl p-4 flex flex-col gap-3">
             <p className="text-on-secondary-container text-sm">
-              No routine selected. Pick one to start your next session.
+              No routine created for today. Create one to start your next session.
             </p>
             <Link
-              href="/routines"
+              href="/routines/new"
               className="w-full bg-accent hover:bg-accent-hover text-accent-on
                         h-12 rounded-full font-semibold uppercase tracking-wide
                         transition-colors inline-flex items-center justify-center"
             >
-              Select routine
+              Create Routine
             </Link>
           </div>
         ) : (
@@ -123,7 +123,7 @@ export default async function Home() {
                 <span className="text-content-primary text-sm font-medium">{pr.exercise}</span>
                 <span
                   className="bg-amber text-amber-on text-xs font-bold
-                             px-2 py-1 rounded-lg uppercase tracking-tight"
+                            px-2 py-1 rounded-lg uppercase tracking-tight"
                 >
                   PR {pr.weightKg} kg
                 </span>
