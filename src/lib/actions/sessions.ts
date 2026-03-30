@@ -50,6 +50,40 @@ export async function saveSession(data: {
 
         if (setsError) throw new Error(setsError.message)
     }
+    revalidatePath('/history')
     revalidatePath('/')
-    redirect('/')
+    redirect('/history')
+}
+
+export async function deleteSession(sessionId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { ok: false, error: 'Not authenticated' }
+    }
+
+    const { error: setsError } = await supabase
+        .from('session_sets')
+        .delete()
+        .eq('session_id', sessionId)
+
+    if (setsError) {
+        return { ok: false, error: setsError.message }
+    }
+
+    const { error: sessionError } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+
+    if (sessionError) {
+        return { ok: false, error: sessionError.message }
+    }
+
+    revalidatePath('/history')
+    revalidatePath('/')
+
+    return { ok: true }
 }
