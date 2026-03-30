@@ -26,6 +26,11 @@
   --color-content-muted: #374151;
   --color-on-secondary-container: #b5b5b5;
   --color-surface-container-low: #1b1b1b;
+  --color-outline-variant: #45483b;
+  --color-surface-container-high: #2a2a2a;
+  --color-surface-container-lowest: #0e0e0e;
+
+
 
   /* RIR semántico */
   --color-rir-hard: #C26A6A;
