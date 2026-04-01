@@ -13,7 +13,7 @@ export type SessionWithStats = {
 }
 
 export default async function HistoryPage() {
-    const useMockSessions = true
+    const useMockSessions = false
     const supabase = await createClient()
 
     const { data: sessions } = await supabase
