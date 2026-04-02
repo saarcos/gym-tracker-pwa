@@ -5,7 +5,6 @@ import { createClient } from '@/utils/supabase/server'
 export default async function Home() {
   const supabase = await createClient()
   const today = new Date()
-  const todayName = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
 
   function getWeekStart(date: Date): string {
     const d = new Date(date)

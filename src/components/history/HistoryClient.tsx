@@ -104,7 +104,7 @@ export default function HistoryClient({ sessions }: { sessions: SessionWithStats
             <div className="flex flex-col gap-6 min-h-screen px-6 pt-8 pb-32">
                 <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2 text-content-primary">
-                        <h1 className="text-xl text-accent">History</h1>
+                        <h1 className="text-xl text-accent uppercase tracking-widest font-bold">History</h1>
                     </div>
                     <button className="text-content-primary">
                         <Calendar />
@@ -132,7 +132,7 @@ export default function HistoryClient({ sessions }: { sessions: SessionWithStats
         <div className="flex flex-col gap-6 min-h-screen px-6 pt-8 pb-32">
             <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2 text-content-primary">
-                    <h1 className="text-xl text-accent">History</h1>
+                    <h1 className="text-xl text-accent uppercase tracking-widest font-bold">History</h1>
                 </div>
                 <button
                     type="button"

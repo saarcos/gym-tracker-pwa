@@ -38,12 +38,12 @@ export default async function RoutinesPage() {
         return (
             <div className="flex flex-col min-h-screen px-6 pt-8 pb-32">
                 <div className="flex w-full items-center justify-between">
-                    <h1 className="text-lg font-bold tracking-widest uppercase text-accent">
+                    <h1 className="text-xl font-bold tracking-widest uppercase text-accent">
                         Routines
                     </h1>
                     <Link
                         href="/routines/new"
-                        className="bg-[#2a2a2a] text-[#c3de83] hover:bg-[#2a2a2a] transition-colors w-10 h-10 rounded-full flex items-center justify-center"
+                        className="bg-surface-container-high text-[#c3de83] hover:bg-surface-container-high transition-colors w-10 h-10 rounded-full flex items-center justify-center"
                     >
                         <Plus />
                     </Link>

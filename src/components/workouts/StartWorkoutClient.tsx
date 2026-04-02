@@ -27,7 +27,18 @@ type CompletedSet = {
     rir: number;
 };
 
-export default function StartWorkoutClient({ routine }: { routine: RoutineWithExercises }) {
+type LastSessionByExercise = Record<string, {
+    sets: { weightKg: number; reps: number; rir: number }[];
+    suggested: number | null;
+}>;
+
+export default function StartWorkoutClient({
+    routine,
+    lastSessionByExercise,
+}: {
+    routine: RoutineWithExercises;
+    lastSessionByExercise: LastSessionByExercise;
+}) {
 
     const [selectedExercise, setSelectedExercise] = useState(0);
 
@@ -36,8 +47,13 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
 
     const buildSetsData = (exerciseIndex: number) => {
         const exercise = routine.routine_exercises[exerciseIndex];
+        const suggestedWeight = exercise
+            ? lastSessionByExercise[exercise.exercise_id]?.suggested
+            : null;
         const defaultSetValues: SetValues = {
-            kg: "0",
+            kg: suggestedWeight !== null && suggestedWeight !== undefined
+                ? String(suggestedWeight)
+                : "0",
             reps: String(exercise?.reps_target ?? 12),
             rir: String(exercise?.rir_target ?? 2),
         };
@@ -62,6 +78,13 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const isExerciseCompleted = completedCount >= targetSets && editingSetIndex === null;
+    const currentLastSession = currentExercise
+        ? lastSessionByExercise[currentExercise.exercise_id]
+        : undefined;
+    const suggested = currentLastSession?.suggested
+
+    const latestSet = currentLastSession?.sets?.[0];
+    const hasLastSession = Boolean(latestSet);
     const activeSetIndex =
         editingSetIndex !== null
             ? editingSetIndex
@@ -297,18 +320,32 @@ export default function StartWorkoutClient({ routine }: { routine: RoutineWithEx
                 <h1 className="text-[1.375rem] font-bold leading-tight text-content-primary">{currentExercise?.exercise.name}</h1>
                 <p className="text-on-secondary-container text-[0.8125rem] font-medium opacity-70">{currentExercise?.sets_target} sets · {currentExercise?.reps_target} reps · RIR {currentExercise?.rir_target}</p>
                 <p className="text-on-secondary-container text-[0.6875rem] font-bold uppercase tracking-wider">Logged sets: {completedSets.length}</p>
-
+            </div>
+            {suggested !== null ? (
                 <div className="mt-2 inline-flex items-center gap-2 bg-accent px-3 py-1.5 rounded-full max-w-50">
                     <TrendingUp className="text-accent-on" />
-                    <span className="text-accent-on text-[0.75rem] font-bold uppercase tracking-wide">Suggested: 82.5 kg</span>
+                    <span className="text-accent-on text-[0.75rem] font-bold uppercase tracking-wide">
+                        Suggested: {suggested} kg
+                    </span>
                 </div>
-            </div>
+            ) : (
+                <div className="mt-2 inline-flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-full max-w-50">
+                    <TrendingUp className="text-on-secondary-container" />
+                    <span className="text-on-secondary-container text-[0.75rem] font-bold uppercase tracking-wide">
+                        No previous data
+                    </span>
+                </div>
+            )}
             <div className="flex items-center justify-between px-4 py-3 bg-surface-container-low rounded-lg opacity-60">
                 <div className="flex items-center gap-1">
                     <History className="w-4 h-4 text-on-secondary-container" />
                     <span className="text-on-secondary-container font-bold text-xs">LAST SESSION</span>
                 </div>
-                <span className="text-xs font-medium text-on-secondary-container">80 kg x 8 reps</span>
+                <span className="text-xs font-medium text-on-secondary-container">
+                    {hasLastSession
+                        ? `${latestSet?.weightKg} kg x ${latestSet?.reps} reps`
+                        : "No previous session"}
+                </span>
             </div>
             {routine.routine_exercises.length > 0 ? (
                 <section className="mb-2 overflow-hidden rounded-xl border border-on-secondary-container/25 bg-surface-container-low">
