@@ -1,7 +1,6 @@
 import ExercisesClient from "@/components/exercises/ExercisesClient";
 import { createClient } from "@/utils/supabase/server"
-import { Plus, Search } from "lucide-react";
-import Link from "next/link";
+
 
 export type ExerciseRow = {
     id: string,

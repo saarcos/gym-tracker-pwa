@@ -71,7 +71,11 @@ export default function RoutineForm({ routine, availableExercises }: Props) {
         )
     }
 
-    const allExercises = [...availableExercises, ...customExercises]
+    const allExercises = Array.from(
+        new Map(
+            [...availableExercises, ...customExercises].map((exercise) => [exercise.id, exercise])
+        ).values()
+    )
 
     const categories = [
         "all",
