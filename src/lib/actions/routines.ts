@@ -3,44 +3,13 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-// ─── Crear ejercicio custom ───
-export async function createExercise(formData: {
-    name: string
-    muscle_group: string
-    type: string
-}) {
-    const supabase = await createClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    const { data, error } = await supabase
-        .from('exercises')
-        .insert({
-            name: formData.name.trim(),
-            muscle_group: formData.muscle_group,
-            type: formData.type,
-            is_custom: true,
-            user_id: user.id,
-        })
-        .select()
-        .single()
-
-    if (error) {
-        // Violación de unique constraint (nombre duplicado)
-        if (error.code === '23505') {
-            throw new Error('An exercise with that name already exists.')
-        }
-        throw new Error(error.message)
-    }
-
-    return data
-}
 
 // ─── Crear rutina ───
 export async function createRoutine(formData: {
     name: string
     days: string[]
+    is_active: boolean
     exercises: {
         exercise_id: string
         sets_target: number
@@ -61,8 +30,8 @@ export async function createRoutine(formData: {
         .insert({
             name: formData.name.trim(),
             days: formData.days,
+            is_active: formData.is_active,
             user_id: user.id,
-            is_active: true,
         })
         .select()
         .single()
@@ -91,6 +60,7 @@ export async function createRoutine(formData: {
 export async function updateRoutine(routineId: string, formData: {
     name: string
     days: string[]
+    is_active: boolean
     exercises: {
         exercise_id: string
         sets_target: number
@@ -111,6 +81,7 @@ export async function updateRoutine(routineId: string, formData: {
         .update({
             name: formData.name.trim(),
             days: formData.days,
+            is_active: formData.is_active
         })
         .eq('id', routineId)
         .eq('user_id', user.id) // seguridad extra además del RLS
@@ -138,6 +109,21 @@ export async function updateRoutine(routineId: string, formData: {
 
         if (insertError) throw new Error(insertError.message)
     }
+
+    revalidatePath('/routines')
+    redirect('/routines')
+}
+
+export async function deleteRoutine(routineId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+    const { error } = await supabase
+        .from('routines')
+        .delete()
+        .eq('id', routineId)
+        .eq('user_id', user.id)
+    if(error) throw new Error(error.message)
 
     revalidatePath('/routines')
     redirect('/routines')

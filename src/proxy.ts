@@ -1,4 +1,3 @@
-// src/proxy.ts
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -29,7 +28,10 @@ export async function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname
     const isPublicRoute =
         pathname.startsWith('/login') ||
-        pathname.startsWith('/sign-up')
+        pathname.startsWith('/sign-up') ||
+        pathname.startsWith('/icons') ||
+        pathname === '/manifest.json' ||
+        pathname === '/manifest.webmanifest'
 
     if (!user && !isPublicRoute) {
         return NextResponse.redirect(new URL('/login', request.url))
@@ -39,5 +41,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+    matcher: ['/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|manifest.webmanifest).*)'],
 }

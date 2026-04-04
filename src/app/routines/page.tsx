@@ -61,8 +61,8 @@ export default async function RoutinesPage() {
                         </div>
 
                         <div className="w-32 h-44 border border-on-secondary-container/30 rounded-xl flex flex-col p-4 gap-3 relative overflow-hidden bg-surface-base">
-                            <div className="w-full h-2 bg-[#2a2a2a] rounded-full" />
-                            <div className="w-2/3 h-2 bg-[#2a2a2a] rounded-full" />
+                            <div className="w-full h-2 bg-surface-container-high rounded-full" />
+                            <div className="w-2/3 h-2 bg-surface-container-high rounded-full" />
                             <div className="mt-auto flex justify-between">
                                 <div className="w-6 h-6 border border-on-secondary-container/20 rounded-sm" />
                                 <div className="w-6 h-6 border border-on-secondary-container/20 rounded-sm" />
@@ -84,7 +84,7 @@ export default async function RoutinesPage() {
                     <div className="mt-12">
                         <Link
                             href="/routines/new"
-                            className="bg-[#2a2a2a] text-[#c3de83] w-10 h-10 rounded-full flex items-center justify-center"
+                            className="bg-surface-container-high text-[#c3de83] w-10 h-10 rounded-full flex items-center justify-center"
                         >
                             <Plus />
                         </Link>
@@ -102,7 +102,7 @@ export default async function RoutinesPage() {
                 </h1>
                 <Link
                     href="/routines/new"
-                    className="bg-[#2a2a2a] text-[#c3de83] hover:bg-[#2a2a2a] transition-colors w-10 h-10 rounded-full flex items-center justify-center"
+                    className="bg-surface-container-high text-[#c3de83] hover:bg-surface-container-high transition-colors w-10 h-10 rounded-full flex items-center justify-center"
                 >
                     <Plus />
                 </Link>
@@ -135,7 +135,7 @@ export default async function RoutinesPage() {
                     INACTIVE
                 </span>
                 {inactiveRoutines.map((routine) => (
-                    <div key={routine.id} className="w-full flex justify-between items-center p-4 border border-on-secondary-container/50 rounded-xl opacity-40">
+                    <Link href={`/routines/${routine.id}`} key={routine.id} className="w-full flex justify-between items-center p-4 border border-on-secondary-container/50 rounded-xl opacity-40">
                         <div className="flex flex-col gap-1">
                             <p className="text-content-primary text-lg font-semibold">{routine.name}</p>
                             <div className="flex items-center gap-2">
@@ -150,7 +150,7 @@ export default async function RoutinesPage() {
                             <p>{routine.routine_exercises.length} {routine.routine_exercises.length !== 1 ? "exercises" : "exercise"} </p>
                             <ChevronRight className="w-5 h-5" />
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </div>
         </div>

@@ -95,7 +95,7 @@ export default async function Profile() {
                     </Link>
                     <div className="h-px bg-on-secondary-container/10" />
                     <Link
-                        href="/routines"
+                        href="/exercises"
                         className="flex items-center justify-between px-4 py-4 hover:bg-surface-elevated transition-colors"
                     >
                         <span className="text-content-primary text-sm font-medium">Custom exercises</span>
